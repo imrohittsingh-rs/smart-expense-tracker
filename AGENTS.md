@@ -8,19 +8,19 @@ You should think like a senior mobile developer, but explain and implement like 
 
 ## Project Overview
 
-We are building a Duolingo-inspired AI language learning mobile app using Expo.
+We are building a Smart Student Expense & Group-Bill Splitting mobile app with OCR Receipt Parser using React Native and Expo.
 
-The app teaches users languages through interactive lessons that may include:
+The app helps students track personal expenses, split group bills, and extract receipt details using OCR. Core features include:
 
-- video-based AI teacher lessons
-- audio lessons
-- chat-based AI tutor lessons
-- vocabulary review
-- local XP and lesson completion
-- language selection
+- personal expense tracking with categories, notes, dates, and receipt attachments
+- groups, members, and shared bills
+- equal, custom-amount, and item-based bill splitting
+- receipt capture/import and OCR parsing with an editable review step
+- group balances, suggested settlements, and settlement records
+- budgets and expense insights when requested
 - beautiful mobile-first UI inspired by playful learning apps
 
-This is primarily a learning project. The goal is to teach developers how to build a modern AI-powered Expo app feature by feature.
+This is a practical learning project. Build the expense, group-bill, and receipt-OCR features incrementally with clear, maintainable code.
 
 ---
 
@@ -34,13 +34,15 @@ Use the following stack:
 - Expo Router
 - NativeWind / Tailwind CSS
 - Zustand
-- AsyncStorage
+- AsyncStorage for non-sensitive local preferences when persistence is needed
 - Clerk for authentication
-- Stream / GetStream for video and real-time communication
-- Stream Vision Agents for AI video teacher capability
-- Server-side API routes or backend functions for secrets, tokens, and AI calls
+- Expo SecureStore when sensitive device-side storage is required
+- Node.js and Express for the backend API
+- MongoDB and Mongoose for persistent application data
+- OCR / Receipt Parsing
+- Server-side API routes or backend functions where appropriate
 
-Do not introduce new major libraries unless there is a strong reason.
+Do not introduce additional major libraries unless there is a clear technical benefit. Explain why a new dependency is needed and ask for permission before installing it.
 
 ---
 
@@ -89,14 +91,16 @@ Use this structure unless there is a strong reason to change it:
 app/
   (auth)/
   (tabs)/
-  lesson/
+  expenses/
+  groups/
+  receipts/
 components/
 constants/
-data/
+features/
 hooks/
-lib/
+services/
 store/
-types/
+data/
 assets/
 ```
 
@@ -112,7 +116,7 @@ Create a component only when:
 
 - it is reused in multiple places
 - it makes a screen easier to read
-- it represents a clear UI concept like `LessonCard`, `XPBar`, `LanguageCard`, or `PrimaryButton`
+- it represents a clear UI concept like `ExpenseCard`, `GroupCard`, `BillSummary`, or `PrimaryButton`
 
 Do not create tiny one-off components too early.
 
@@ -120,6 +124,12 @@ When unsure, ask:
 
 > Should this UI be extracted into a reusable component, or should I keep it inside the current screen for now?
 
+### features/, services/, and hooks/
+- Keep feature-specific UI and logic organized by feature when the project structure supports it.
+- Put API calls and external service integrations in `services/`.
+- Put reusable React hooks in `hooks/`.
+- Keep financial calculations in small, testable utility/service functions rather than burying them in screens.
+- Keep backend business rules on the backend. The mobile app may provide immediate UI feedback, but the server is authoritative.
 ---
 
 ## UI Implementation Rules (VERY IMPORTANT)
@@ -161,8 +171,8 @@ After generating images:
 
 ```txt
 assets/images/
-  onboarding-illustration.png
-  mascot-happy.png
+  empty-expenses.png
+  receipt-scan-guide.png
 ```
 
 Use these assets properly in the UI.
@@ -294,19 +304,19 @@ Before using any image asset:
 Example:
 
 ```ts
-import mascot from "@/assets/images/mascot.png";
-import mascotLogo from "@/assets/images/mascot-logo.png";
+import emptyExpenses from "@/assets/images/empty-expenses.png";
+import receiptScanGuide from "@/assets/images/receipt-scan-guide.png";
 
 export const images = {
-  mascot,
-  mascotLogo,
+  emptyExpenses,
+  receiptScanGuide,
 };
 ```
 
 Use images like this,
 
 ```tsx
-<Image source={images.mascot} />
+<Image source={images.emptyExpenses} />
 ```
 
 Do not require/import image assets directly inside screens or components unless there is a strong reason.
@@ -315,62 +325,77 @@ Do not require/import image assets directly inside screens or components unless 
 
 ## data/
 
-Use this for hardcoded lesson content.
+Use this folder for static application configuration, not persistent user financial records.
 
 Example:
 
 ```txt
 data/
-  languages.ts
-  lessons.ts
+  expenseCategories.ts
+  splitMethods.ts
+  currencies.ts
 ```
 
-Lesson content should be typed.
+Keep static configuration typed. User expenses, groups, bills, split
+allocations, receipt metadata, and settlements must be persisted through
+the backend and MongoDB, not hardcoded in TypeScript files.
 
 ---
 
 ## store/
 
-Use Zustand stores here.
+Use Zustand for shared client-side state when it is genuinely needed,
+such as:
+- Active UI filters or sorting selections
+- Temporary multi-screen bill or expense drafts when necessary
+- Non-sensitive app preferences
+- UI state shared by multiple components
 
-Use Zustand for:
+Use local component state for short-lived state that does not need to be
+shared.
 
-- selected language
-- completed lessons
-- XP
-- streak-like local values
-- current lesson state
-- app settings
+Do not copy all server data into Zustand by default. Keep server-persisted records authoritative on the backend and refresh or update the client state through API responses. Use AsyncStorage only for appropriate non-sensitive preferences or state that explicitly needs local persistence.
 
-Use AsyncStorage persistence where needed.
+Do not store secrets or sensitive authentication tokens in plain AsyncStorage.
 
 ---
 
-## lib/
+## services/ and lib/
 
-Use this for external service helpers.
+Use services/ or the existing project convention for API and external service helpers. Avoid maintaining duplicate folders that do the same job.
 
 Examples:
 
 ```txt
+services/
+  api.ts
+  expenses.ts
+  groups.ts
+  receipts.ts
+  settlements.ts
 lib/
   clerk.ts
-  stream.ts
-  api.ts
+  money.ts
   cn.ts
 ```
 
-Never expose secret keys in the mobile app.
+Adapt names to the existing codebase rather than creating every file up front. Keep API requests centralized and typed where practical. Never expose server secrets, private API keys, database credentials, or privileged service tokens in the mobile app.
 
 ---
 
 ## State Management Rules
 
-Use Zustand for global client state.
+Use Zustand for shared global client state.
 
-Use local state for temporary UI state.
+Use local state for temporary component or screen state.
 
-Persist using AsyncStorage when needed.
+Use AsyncStorage only when non-sensitive local persistence is needed.
+
+Use Expo SecureStore for sensitive device-side values when appropriate.
+
+Treat the backend as the source of truth for persistent financial records.
+
+Handle loading, empty, success, and error states explicitly.
 
 ---
 
@@ -398,15 +423,21 @@ When the user asks to build a feature:
 
 ---
 
-## AI / Stream / Vision Agent Rules
+## OCR and Backend Security Rules
 
-Use backend/serverless for:
+Keep OCR integration and receipt parsing modular so the recognition provider can be changed if needed.
 
-- Stream tokens
-- AI calls
-- Vision Agent sessions
+Separate text recognition, structured field extraction, validation, and user confirmation.
 
-Never expose secrets in the frontend.
+Never save OCR-extracted financial data as a confirmed expense or bill without the required user confirmation.
+
+Keep secret keys and privileged operations on the backend.
+
+Validate uploaded receipt files, enforce reasonable file-size limits, and avoid logging sensitive receipt contents.
+
+Ensure each authenticated user can access only the resources they are authorized to access.
+
+Perform authoritative bill-split, rounding, balance, and settlement calculations on the backend.
 
 ---
 
@@ -414,15 +445,33 @@ Never expose secrets in the frontend.
 
 Use Clerk for authentication.
 
-Do not build custom auth.
+Do not build a separate custom authentication system.
+
+The backend must verify the Clerk-authenticated identity using the supported server-side integration.
+
+Enforce authorization on every protected resource and operation; being signed in does not automatically grant access to every group, bill, or expense.
+
+Never put Clerk secret keys in the mobile app.
+
+Follow the installed Clerk SDK version and its official setup for the current Expo/React Native project.
 
 ---
 
-## Lesson Content Rules
+## Expense and Bill Data Rules
 
-Use hardcoded JSON/TS for lessons.
+Store persistent users, expenses, groups, bills, split allocations, receipt metadata, and settlements in MongoDB through the Express backend.
 
-Do not introduce a database unless explicitly requested.
+Use local JSON or TypeScript files only for static configuration, such as expense categories and supported split methods.
+
+Validate all financial inputs on the backend.
+
+Represent monetary values using integer minor units (paise for INR) to avoid floating-point rounding errors.
+
+Ensure split allocations reconcile exactly with the bill total.
+
+Treat OCR results as suggestions until the user reviews and confirms them.
+
+Do not store persistent financial records only in Zustand or AsyncStorage.
 
 ---
 
@@ -431,6 +480,8 @@ Do not introduce a database unless explicitly requested.
 Avoid overengineering.
 
 Refactor only when needed.
+
+Prefer small, focused functions.
 
 ---
 
@@ -465,14 +516,17 @@ Explain what changed and how to test.
 
 ## Important Constraints
 
-No database for this version.
+Use MongoDB and Mongoose for persistent application data through the Node.js and Express backend.
 
-Use:
+Use Clerk for authentication and enforce resource-level authorization on the backend.
 
-- JSON for content
-- Zustand for state
-- AsyncStorage for persistence
-- backend only for secure operations
+Use Zustand for shared client state and AsyncStorage for non-sensitive local preferences.
+
+Use secure device storage for sensitive tokens when required by the authentication integration.
+
+Keep secrets and privileged operations on the backend.
+
+Do not introduce additional major dependencies without explaining the need and receiving approval.
 
 ---
 

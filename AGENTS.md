@@ -88,20 +88,21 @@ Do not install or use new libraries without user approval.
 Use this structure unless there is a strong reason to change it:
 
 ```txt
-app/
-  (auth)/
-  (tabs)/
-  expenses/
-  groups/
-  receipts/
-components/
-constants/
-features/
-hooks/
-services/
-store/
-data/
-assets/
+src/
+  app/
+    (auth)/
+    (tabs)/
+    expenses/
+    groups/
+    receipts/
+  components/
+  constants/
+  features/
+  hooks/
+  services/
+  store/
+  data/
+  assets/
 ```
 
 ### app/
